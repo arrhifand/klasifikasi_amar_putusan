@@ -94,15 +94,15 @@ if menu == "Prediksi Putusan":
                 try:
                     cleaned_text = preprocess_text(user_input, stemmer, stopword)
                     sequences = tokenizer.texts_to_sequences([cleaned_text])
-                    padded_sequences = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding=PADDING_TYPE, truncating=TRUNCATING_TYPE)
+                    padded_sequences = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding=PADDING_TYPE, truncating=truncating='post')
                     
                     prediction_prob = model.predict(padded_sequences)[0][0]
                     
                     if prediction_prob >= 0.5:
-                        hasil = "Cerai Gugat"
+                        hasil = "Cerai Talak"
                         confidence = prediction_prob * 100
                     else:
-                        hasil = "Cerai Talak"
+                        hasil = "Cerai Gugat"
                         confidence = (1 - prediction_prob) * 100
                     
                     st.success("Selesai!")
