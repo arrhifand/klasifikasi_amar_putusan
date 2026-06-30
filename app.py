@@ -16,6 +16,10 @@ st.set_page_config(page_title="Klasifikasi Putusan", page_icon="⚖️", layout=
 
 # --- PARAMETER MODEL ---
 MAX_SEQUENCE_LENGTH = 150 
+# CATATAN PENTING: Cek kembali apakah di Colab Anda menggunakan padding='pre' atau padding='post'
+PADDING_TYPE = 'pre'  # Default keras adalah 'pre'
+TRUNCATING_TYPE = 'pre'
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "lstm_model_last_fold.keras")
 PATCHED_MODEL_PATH = os.path.join(BASE_DIR, "lstm_model_last_fold_patched.keras")
@@ -78,7 +82,7 @@ if menu == "Prediksi Putusan":
                 try:
                     cleaned_text = preprocess_text(user_input, stemmer, stopword)
                     sequences = tokenizer.texts_to_sequences([cleaned_text])
-                    padded_sequences = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
+                    padded_sequences = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding=PADDING_TYPE, truncating=TRUNCATING_TYPE)
                     
                     prediction_prob = model.predict(padded_sequences)[0][0]
                     
@@ -94,8 +98,14 @@ if menu == "Prediksi Putusan":
                     st.progress(int(confidence) / 100)
                     st.caption(f"Tingkat Keyakinan (Confidence): {confidence:.2f}%")
                     
-                    with st.expander("Lihat Hasil Preprocessing Teks"):
+                    with st.expander("🛠️ Lihat Detail Debugging (Klik di sini)"):
+                        st.markdown("**1. Teks Setelah Preprocessing:**")
                         st.write(cleaned_text)
+                        st.markdown("**2. Sequence Tokenizer (Angka Keras):**")
+                        st.write(sequences[0])
+                        st.markdown("**3. Probabilitas Mentah (Raw Probability):**")
+                        st.code(str(prediction_prob))
+                        st.markdown("*Jika array sequence kosong `[]` atau hasil probabilitas sama persis terus menerus, berarti ada ketidakcocokan pada tokenizer atau metode preprocessing (misalnya saat training tidak di-stemming).*")
                         
                 except Exception as e:
                     st.error(f"Terjadi kesalahan: {e}")
