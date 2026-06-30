@@ -94,7 +94,7 @@ if menu == "Prediksi Putusan":
                 try:
                     cleaned_text = preprocess_text(user_input, stemmer, stopword)
                     sequences = tokenizer.texts_to_sequences([cleaned_text])
-                    padded_sequences = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding=PADDING_TYPE, truncating=truncating='post')
+                    padded_sequences = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding=PADDING_TYPE, truncating='post')
                     
                     prediction_prob = model.predict(padded_sequences)[0][0]
                     
