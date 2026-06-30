@@ -49,10 +49,22 @@ def load_model_and_tokenizer():
 
 # --- FUNGSI PREPROCESSING ---
 def preprocess_text(text, stemmer, stopword):
+    # 1. Hapus tag HTML (seperti <p>, <li>, <strong>, <ol>)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    
     text = text.lower()
     text = re.sub(r'[^a-z\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Hapus stopword bawaan Sastrawi
     text = stopword.remove(text)
+    
+    # Hapus custom stopword ("li", "p", "strong", "ol" dsb yang mungkin tersisa)
+    custom_stopwords = ['li', 'p', 'strong', 'ol', 'br', 'div', 'span']
+    words = text.split()
+    words = [w for w in words if w not in custom_stopwords]
+    text = ' '.join(words)
+    
     text = stemmer.stem(text)
     return text
 
@@ -105,7 +117,14 @@ if menu == "Prediksi Putusan":
                         st.write(sequences[0])
                         st.markdown("**3. Probabilitas Mentah (Raw Probability):**")
                         st.code(str(prediction_prob))
-                        st.markdown("*Jika array sequence kosong `[]` atau hasil probabilitas sama persis terus menerus, berarti ada ketidakcocokan pada tokenizer atau metode preprocessing (misalnya saat training tidak di-stemming).*")
+                        
+                        st.info("""
+                        **PANDUAN DEBUGGING PREDIKSI TERBALIK:**
+                        1. Jika nilai Probabilitas di atas sangat mendekati 0 (misal: `0.001`), dan aslinya teks tersebut adalah **Cerai Gugat**, itu berarti di model Anda `0 = Cerai Gugat` dan `1 = Cerai Talak`.
+                        2. Jika demikian, Anda cukup membalik logika di kode `app.py` pada baris ke-85 menjadi:
+                           `if prediction_prob >= 0.5: hasil = "Cerai Talak" else: hasil = "Cerai Gugat"`
+                        3. Selain itu, dokumen putusan biasanya sangat panjang. Karena `MAX_SEQUENCE_LENGTH = 150`, teks Anda akan **terpotong**. Jika kata kunci penting berada di awal dokumen, pastikan di Colab Anda menggunakan `truncating='post'`, dan ubah `TRUNCATING_TYPE` di `app.py` menjadi `'post'` juga.
+                        """)
                         
                 except Exception as e:
                     st.error(f"Terjadi kesalahan: {e}")
