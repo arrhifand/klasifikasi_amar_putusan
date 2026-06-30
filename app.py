@@ -16,9 +16,9 @@ st.set_page_config(page_title="Klasifikasi Putusan", page_icon="⚖️", layout=
 
 # --- PARAMETER MODEL ---
 MAX_SEQUENCE_LENGTH = 150 
-# CATATAN PENTING: Cek kembali apakah di Colab Anda menggunakan padding='pre' atau padding='post'
-PADDING_TYPE = 'pre'  # Default keras adalah 'pre'
-TRUNCATING_TYPE = 'pre'
+# Disesuaikan dengan pad_sequences saat training di Colab
+PADDING_TYPE = 'post'
+TRUNCATING_TYPE = 'post'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "lstm_model_last_fold.keras")
@@ -98,12 +98,16 @@ if menu == "Prediksi Putusan":
                     
                     prediction_prob = model.predict(padded_sequences)[0][0]
                     
-                    if prediction_prob >= 0.5:
-                        hasil = "Cerai Talak"
-                        confidence = prediction_prob * 100
-                    else:
+                    # LOGIKA LABEL:
+                    # Model output sigmoid mendekati 0 = Cerai Gugat
+                    # Model output sigmoid mendekati 1 = Cerai Talak
+                    # (Dibalik karena label 0=Gugat, 1=Talak saat training)
+                    if prediction_prob < 0.5:
                         hasil = "Cerai Gugat"
                         confidence = (1 - prediction_prob) * 100
+                    else:
+                        hasil = "Cerai Talak"
+                        confidence = prediction_prob * 100
                     
                     st.success("Selesai!")
                     st.markdown(f"### Kategori: **{hasil}**")
@@ -113,18 +117,21 @@ if menu == "Prediksi Putusan":
                     with st.expander("🛠️ Lihat Detail Debugging (Klik di sini)"):
                         st.markdown("**1. Teks Setelah Preprocessing:**")
                         st.write(cleaned_text)
+                        
                         st.markdown("**2. Sequence Tokenizer (Angka Keras):**")
                         st.write(sequences[0])
+                        
+                        # Analisis OOV
+                        if len(sequences[0]) > 0:
+                            oov_token_idx = tokenizer.word_index.get('<OOV>', tokenizer.word_index.get('oov', None))
+                            most_common = max(set(sequences[0]), key=sequences[0].count)
+                            most_common_count = sequences[0].count(most_common)
+                            oov_ratio = most_common_count / len(sequences[0]) * 100
+                            if most_common_count > 2:
+                                st.warning(f"⚠️ Token `{most_common}` muncul {most_common_count}x ({oov_ratio:.0f}% dari total token). Kemungkinan besar ini adalah token OOV (Out-of-Vocabulary), artinya banyak kata yang tidak dikenali tokenizer karena perbedaan preprocessing saat training vs sekarang.")
+                        
                         st.markdown("**3. Probabilitas Mentah (Raw Probability):**")
                         st.code(str(prediction_prob))
-                        
-                        st.info("""
-                        **PANDUAN DEBUGGING PREDIKSI TERBALIK:**
-                        1. Jika nilai Probabilitas di atas sangat mendekati 0 (misal: `0.001`), dan aslinya teks tersebut adalah **Cerai Gugat**, itu berarti di model Anda `0 = Cerai Gugat` dan `1 = Cerai Talak`.
-                        2. Jika demikian, Anda cukup membalik logika di kode `app.py` pada baris ke-85 menjadi:
-                           `if prediction_prob >= 0.5: hasil = "Cerai Talak" else: hasil = "Cerai Gugat"`
-                        3. Selain itu, dokumen putusan biasanya sangat panjang. Karena `MAX_SEQUENCE_LENGTH = 150`, teks Anda akan **terpotong**. Jika kata kunci penting berada di awal dokumen, pastikan di Colab Anda menggunakan `truncating='post'`, dan ubah `TRUNCATING_TYPE` di `app.py` menjadi `'post'` juga.
-                        """)
                         
                 except Exception as e:
                     st.error(f"Terjadi kesalahan: {e}")
